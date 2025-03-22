@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        td {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            font-size: 20px;
+            border: 1px solid black;
+        }
+        input {
+            width: 35px;
+            height: 35px;
+            text-align: center;
+            font-size: 18px;
+            border: none;
+            outline: none;
+        }
+        .given {
+            background-color: #ddd;
+            font-weight: bold;
+        }
+        .btn {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sudoku Solver</h1>
+    <p id="timer">Time: 0s</p>
+    <label for="difficulty">Difficulty:</label>
+    <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+    </select>
+    <table id="sudoku-board"></table>
+    <button class="btn" onclick="solveSudoku()">Solve</button>
+    <button class="btn" onclick="generateSudoku()">New Puzzle</button>
+    <button class="btn" onclick="checkSolution()">Check</button>
+    <p id="message"></p>
+    
+    <script>
+        let board = Array.from({ length: 9 }, () => Array(9).fill(0));
+        let solution = [];
+        let givenCells = [];
+        let timer;
+        let time = 0;
+
+        function startTimer() {
+            clearInterval(timer);
+            time = 0;
+            document.getElementById("timer").textContent = "Time: 0s";
+            timer = setInterval(() => {
+                time++;
+                document.getElementById("timer").textContent = `Time: ${time}s`;
+            }, 1000);
+        }
+
+        function createBoard() {
+            const table = document.getElementById("sudoku-board");
+            table.innerHTML = "";
+            for (let i = 0; i < 9; i++) {
+                let row = table.insertRow();
+                for (let j = 0; j < 9; j++) {
+                    let cell = row.insertCell();
+                    let input = document.createElement("input");
+                    input.type = "text";
+                    input.maxLength = 1;
+                    input.value = board[i][j] !== 0 ? board[i][j] : "";
+                    input.readOnly = givenCells.includes(`${i},${j}`);
+                    if (input.readOnly) input.classList.add("given");
+                    input.oninput = function() {
+                        let val = parseInt(input.value);
+                        if (!input.readOnly) {
+                            board[i][j] = (val >= 1 && val <= 9) ? val : 0;
+                        }
+                    };
+                    cell.appendChild(input);
+                }
+            }
+        }
+
+        function isValid(board, row, col, num) {
+            for (let i = 0; i < 9; i++) {
+                if (board[row][i] === num || board[i][col] === num) return false;
+                let boxRow = 3 * Math.floor(row / 3) + Math.floor(i / 3);
+                let boxCol = 3 * Math.floor(col / 3) + (i % 3);
+                if (board[boxRow][boxCol] === num) return false;
+            }
+            return true;
+        }
+
+        function solve(board) {
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] === 0) {
+                        for (let num = 1; num <= 9; num++) {
+                            if (isValid(board, row, col, num)) {
+                                board[row][col] = num;
+                                if (solve(board)) return true;
+                                board[row][col] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function solveSudoku() {
+            solve(board);
+            createBoard();
+        }
+
+        function generateSudoku() {
+            let difficulty = document.getElementById("difficulty").value;
+            let clues = difficulty === "easy" ? 40 : difficulty === "medium" ? 30 : 20;
+            board = Array.from({ length: 9 }, () => Array(9).fill(0));
+            solve(board);
+            solution = board.map(row => [...row]);
+            let filledCells = new Set();
+            givenCells = [];
+            while (filledCells.size < clues) {
+                let r = Math.floor(Math.random() * 9);
+                let c = Math.floor(Math.random() * 9);
+                if (!filledCells.has(`${r},${c}`)) {
+                    filledCells.add(`${r},${c}`);
+                    givenCells.push(`${r},${c}`);
+                }
+            }
+            board = board.map((row, rIdx) => row.map((num, cIdx) => filledCells.has(`${rIdx},${cIdx}`) ? num : 0));
+            createBoard();
+            startTimer();
+            document.getElementById("message").textContent = "";
+        }
+
+        function checkSolution() {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] !== solution[i][j]) {
+                        document.getElementById("message").textContent = "Incorrect solution, keep trying!";
+                        return;
+                    }
+                }
+            }
+            clearInterval(timer);
+            document.getElementById("message").textContent = `Great job! You solved it in ${time} seconds!`;
+        }
+
+        generateSudoku();
+    </script>
+</body>
+</html>
